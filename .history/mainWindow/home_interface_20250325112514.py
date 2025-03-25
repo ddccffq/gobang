@@ -187,8 +187,8 @@ class HomeInterface(QWidget):
     
     def onStartGameBtnClicked(self):
         """开始游戏按钮点击事件"""
-        # 从interfaces导入棋盘视图
-        from interfaces import BoardWindow
+        # 导入棋盘视图
+        from board_view import BoardWindow
         
         # 获取选择的棋盘风格
         style_index = self.flipView.currentIndex() if hasattr(self, 'flipView') else 0
@@ -198,7 +198,7 @@ class HomeInterface(QWidget):
         self.game_window.show()
         
         # 记录游戏启动
-        print(f"游戏窗口已打开，选择的棋盘风格: {style_index}")
+        print(f"游戏启动，使用棋盘风格: {style_index}")
             
     def onConfirmButtonClicked(self):
         """确认棋盘风格选择按钮点击事件"""

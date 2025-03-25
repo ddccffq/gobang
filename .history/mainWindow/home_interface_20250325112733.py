@@ -187,8 +187,8 @@ class HomeInterface(QWidget):
     
     def onStartGameBtnClicked(self):
         """开始游戏按钮点击事件"""
-        # 从interfaces导入棋盘视图
-        from interfaces import BoardWindow
+        # 导入棋盘视图
+        from board_view import BoardWindow
         
         # 获取选择的棋盘风格
         style_index = self.flipView.currentIndex() if hasattr(self, 'flipView') else 0

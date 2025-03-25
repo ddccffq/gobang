@@ -8,7 +8,8 @@ from qfluentwidgets import (NavigationBar, NavigationItemPosition, MessageBox,
                            isDarkTheme, FluentIcon as FIF)
 from qframelesswindow import FramelessWindow, TitleBar
 
-from interfaces import Widget, StackedWidget, LibraryInterface, HomeInterface, BoardWidget
+from interfaces import Widget, AppInterface, StackedWidget, LibraryInterface, HomeInterface
+from mainWindow.board_view import BoardWidget
 
 
 class CustomTitleBar(TitleBar):
@@ -75,9 +76,9 @@ class Window(FramelessWindow):
         self.stackWidget = StackedWidget(self)
 
         # create sub interface
-        self.homeInterface = HomeInterface(self)
-        self.appInterface = BoardWidget(self)  # 使用BoardWidget替代AppInterface
-        self.libraryInterface = LibraryInterface(self)
+        self.homeInterface = HomeInterface(self)  # 使用新的HomeInterface
+        self.appInterface = BoardWidget(self)  # 使用BoardWidget替代Widget
+        self.libraryInterface = LibraryInterface(self)  # 使用新的LibraryInterface
 
         # initialize layout
         self.initLayout()

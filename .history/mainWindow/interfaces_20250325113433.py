@@ -4,5 +4,4 @@
 from base_widgets import Widget, StackedWidget
 from home_interface import HomeInterface
 from library_interface import LibraryInterface
-from app_interface import AppInterface
-from board_view import BoardWidget, BoardWindow
+
