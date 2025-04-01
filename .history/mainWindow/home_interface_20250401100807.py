@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QLabel, QHBoxLayout, QVBoxLayout, QWidget
 from PyQt5.QtGui import QFont
 
-from qfluentwidgets import PushButton
+from qfluentwidgets import PrimaryPushButton, PushButton
 
 
 class HomeInterface(QWidget):
@@ -25,8 +25,7 @@ class HomeInterface(QWidget):
         self.introLabel = QLabel(
             "欢迎来到五子棋游戏！\n"
             "五子棋是一种两人对弈的纯策略型棋类游戏，通常棋子分为黑白两色。\n"
-            "游戏规则：双方轮流在棋盘上放置自己的棋子，先形成五子连线者获胜。\n\n"
-            "请点击左侧导航栏的\"五子棋游戏\"进入游戏界面。"
+            "游戏规则：双方轮流在棋盘上放置自己的棋子，先形成五子连线者获胜。"
         )
         self.introLabel.setAlignment(Qt.AlignCenter)
         self.introLabel.setWordWrap(True)
@@ -38,13 +37,19 @@ class HomeInterface(QWidget):
         self.buttonWidget = QWidget()
         self.buttonLayout = QHBoxLayout(self.buttonWidget)
         
-        # 只保留历史记录按钮
+        # 添加按钮：开始游戏、查看历史等
+        self.startGameBtn = PrimaryPushButton("开始游戏")
+        self.startGameBtn.setFixedWidth(180)
+        self.startGameBtn.setFixedHeight(40)
+        
         self.historyBtn = PushButton("查看历史记录")
         self.historyBtn.setFixedWidth(180)
         self.historyBtn.setFixedHeight(40)
         
         # 将按钮添加到布局中
         self.buttonLayout.addStretch(1)
+        self.buttonLayout.addWidget(self.startGameBtn)
+        self.buttonLayout.addSpacing(20)
         self.buttonLayout.addWidget(self.historyBtn)
         self.buttonLayout.addStretch(1)
         
@@ -100,12 +105,25 @@ class HomeInterface(QWidget):
     
     def connectSignalsToSlots(self):
         """连接信号和槽"""
-        # 只连接历史按钮点击事件
+        # 连接按钮点击事件
         self.historyBtn.clicked.connect(self.onHistoryBtnClicked)
+        self.startGameBtn.clicked.connect(self.onStartGameBtnClicked)
     
     def onHistoryBtnClicked(self):
         """查看历史记录按钮点击事件"""
-        # 切换到历史对局页面
+        # 切换到库页面显示历史记录
         parent = self.parent()
-        if parent and hasattr(parent, 'historyInterface'):
-            parent.switchTo(parent.historyInterface)
+        if parent and hasattr(parent, 'libraryInterface'):
+            parent.switchTo(parent.libraryInterface)
+    
+    def onStartGameBtnClicked(self):
+        """开始游戏按钮点击事件"""
+        # 从interfaces导入棋盘视图
+        from interfaces import BoardWindow
+        
+        # 创建并显示游戏窗口，使用默认棋盘风格(索引0)
+        self.game_window = BoardWindow(self, style_index=0)
+        self.game_window.show()
+        
+        # 记录游戏启动
+        print(f"游戏窗口已打开，使用默认棋盘风格")

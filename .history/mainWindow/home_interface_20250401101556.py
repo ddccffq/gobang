@@ -105,7 +105,7 @@ class HomeInterface(QWidget):
     
     def onHistoryBtnClicked(self):
         """查看历史记录按钮点击事件"""
-        # 切换到历史对局页面
+        # 切换到库页面显示历史记录
         parent = self.parent()
-        if parent and hasattr(parent, 'historyInterface'):
-            parent.switchTo(parent.historyInterface)
+        if parent and hasattr(parent, 'libraryInterface'):
+            parent.switchTo(parent.libraryInterface)

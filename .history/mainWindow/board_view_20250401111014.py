@@ -1,11 +1,8 @@
 # coding:utf-8
 from PyQt5.QtCore import Qt, QRect, QPoint, QSize
 from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QBrush, QColor, QPaintEvent
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, QSizePolicy, QFrame, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, QSizePolicy, QFrame
 import sys
-import os
-import json
-import datetime
 
 from qfluentwidgets import FluentIcon as FIF, PushButton, ComboBox, isDarkTheme, InfoBar, InfoBarPosition
 from qframelesswindow import FramelessWindow
@@ -40,9 +37,6 @@ class GoBoardWidget(QWidget):
         # 棋盘数据 - 0表示空，1表示黑棋，2表示白棋
         self.board_data = [[0 for _ in range(self.board_size)] for _ in range(self.board_size)]
         
-        # 棋步记录
-        self.move_history = []
-        
         # 设置组件最小大小
         min_board_width = self.board_size * self.base_cell_size + 2 * self.base_padding
         self.setMinimumSize(min_board_width, min_board_width)
@@ -55,8 +49,6 @@ class GoBoardWidget(QWidget):
         
         # 游戏状态标志 - 只有游戏开始后才能下棋
         self.game_started = False
-        self.game_over = False
-        self.winner = 0  # 0表示无胜者，1表示黑棋胜，2表示白棋胜
         
         # 设置组件接受鼠标点击
         self.setMouseTracking(True)
@@ -74,86 +66,12 @@ class GoBoardWidget(QWidget):
         """获取所有棋盘风格名称"""
         return list(self.BOARD_STYLES.keys())
     
-    def reset_game(self, start_immediately=True):
+    def reset_game(self):
         """重置游戏状态"""
         self.board_data = [[0 for _ in range(self.board_size)] for _ in range(self.board_size)]
         self.current_player = 1  # 黑棋先行
-        self.game_started = start_immediately  # 根据参数决定游戏是否立即开始
-        self.move_history = []  # 清空历史记录
-        self.game_over = False  # 游戏未结束
-        self.winner = 0  # 无胜者
+        self.game_started = True  # 游戏已开始
         self.update()
-    
-    def undo_move(self):
-        """悔棋 - 撤销最后一步"""
-        # 如果历史记录为空，或者游戏已通过投降结束，不允许悔棋
-        if not self.move_history or (self.game_over and self.winner > 0):
-            return False
-        
-        # 获取最后一步
-        last_move = self.move_history.pop()
-        
-        # 清除该位置的棋子
-        self.board_data[last_move[0]][last_move[1]] = 0
-        
-        # 切换回前一个玩家
-        self.current_player = 3 - self.current_player
-        
-        # 如果游戏已结束且不是因为投降，恢复为未结束状态
-        if self.game_over and self.winner == 0:
-            self.game_over = False
-            
-        self.update()
-        return True
-    
-    def surrender(self):
-        """投降操作"""
-        if self.game_started and not self.game_over:
-            self.game_over = True
-            self.winner = 3 - self.current_player  # 对方获胜
-            self.update()
-            return True
-        return False
-    
-    def save_game(self, filename=None):
-        """保存游戏状态"""
-        # 获取当前时间戳
-        timestamp = datetime.datetime.now().isoformat()
-        
-        game_data = {
-            "board_data": self.board_data,
-            "current_player": self.current_player,
-            "game_started": self.game_started,
-            "game_over": self.game_over,
-            "move_history": self.move_history,
-            "winner": self.winner,
-            "timestamp": timestamp,  # 添加时间戳
-            "style_index": list(self.BOARD_STYLES.keys()).index(self.current_style),  # 添加棋盘风格索引
-            "player_info": {
-                "player1": "玩家",  # 玩家1是人类
-                "player2": "AI"     # 玩家2是AI
-            }
-        }
-        
-        # 导入历史记录管理器
-        from game_history_manager import GameHistoryManager
-        history_manager = GameHistoryManager()
-        
-        if filename is None:
-            # 生成默认文件名
-            winner_str = "黑胜" if self.winner == 1 else "白胜" if self.winner == 2 else "未结束"
-            default_filename = f"对战_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{winner_str}.json"
-            return default_filename, game_data
-        
-        # 保存到指定文件
-        try:
-            saved_path = history_manager.save_game(game_data, os.path.basename(filename))
-            if saved_path:
-                return saved_path, game_data
-            return None, game_data
-        except Exception as e:
-            print(f"保存游戏失败: {str(e)}")
-            return None, game_data
     
     def paintEvent(self, event: QPaintEvent):
         """绘制棋盘和棋子"""
@@ -164,15 +82,16 @@ class GoBoardWidget(QWidget):
         # 使用较小的维度确保棋盘是正方形的
         size = min(self.width(), self.height())
         
-        # 计算实际可用空间
-        available_space = size - 2 * self.base_padding
+        # 计算棋盘的有效区域大小和边距
+        # 让棋盘边缘线与背景边缘对齐
+        effective_size = size
         
-        # 计算格子大小，确保能够整除
-        cell_size = available_space / (self.board_size - 1)  # 修改：减1确保边缘线贴合
+        # 计算格子大小 - 确保精确划分
+        cell_size = effective_size / (self.board_size - 1)  # 将整个区域分成14等份（15条线）
         
-        # 计算实际棋盘的边距 - 居中对齐
-        padding_x = (self.width() - (self.board_size - 1) * cell_size) / 2
-        padding_y = (self.height() - (self.board_size - 1) * cell_size) / 2
+        # 不需要额外边距，让线条从边缘开始
+        padding_x = (self.width() - effective_size) / 2
+        padding_y = (self.height() - effective_size) / 2
         
         # 计算棋子大小
         stone_size = cell_size * 0.9  # 棋子大小为格子大小的90%
@@ -184,28 +103,23 @@ class GoBoardWidget(QWidget):
         painter.fillRect(QRect(0, 0, self.width(), self.height()), QBrush(style["background"]))
         
         # 设置线条颜色和宽度
-        line_width = max(1, int(cell_size / 15))
+        line_width = max(1, int(cell_size / 15))  # 线宽随格子大小缩放
         painter.setPen(QPen(style["line"], line_width))
         
-        # 绘制网格线 - 修改绘制方式确保线条贴合边界
-        # 在每个循环中计算具体坐标，而不是使用公式
-        
-        # 绘制横线
+        # 绘制横线 - 让线条从边缘到边缘
         for i in range(self.board_size):
-            y = int(padding_y + i * cell_size)
-            # 横线从最左边到最右边
+            y = padding_y + i * cell_size
             painter.drawLine(
-                int(padding_x), y,
-                int(padding_x + (self.board_size - 1) * cell_size), y
+                int(padding_x), int(y),
+                int(padding_x + effective_size), int(y)
             )
         
-        # 绘制竖线
+        # 绘制竖线 - 让线条从边缘到边缘
         for i in range(self.board_size):
-            x = int(padding_x + i * cell_size)
-            # 竖线从最上边到最下边
+            x = padding_x + i * cell_size
             painter.drawLine(
-                x, int(padding_y),
-                x, int(padding_y + (self.board_size - 1) * cell_size)
+                int(x), int(padding_y),
+                int(x), int(padding_y + effective_size)
             )
         
         # 绘制天元和星位
@@ -224,7 +138,7 @@ class GoBoardWidget(QWidget):
         for row in range(self.board_size):
             for col in range(self.board_size):
                 if self.board_data[row][col] != 0:
-                    # 计算棋子位置 - 使用padding_x和padding_y
+                    # 计算棋子位置 - 使用调整后的padding和cell_size
                     x = int(padding_x + col * cell_size - stone_size / 2)
                     y = int(padding_y + row * cell_size - stone_size / 2)
                     
@@ -261,19 +175,20 @@ class GoBoardWidget(QWidget):
     
     def mousePressEvent(self, event):
         """处理鼠标点击事件，放置棋子"""
-        # 如果游戏未开始或已结束，忽略点击
-        if not self.game_started or self.game_over:
+        # 如果游戏未开始，忽略点击
+        if not self.game_started:
             return
             
         if event.button() == Qt.LeftButton:
             # 计算当前实际的格子大小和边距
             size = min(self.width(), self.height())
-            available_space = size - 2 * self.base_padding
-            cell_size = available_space / (self.board_size - 1)  # 与绘制时保持一致
             
-            # 计算实际棋盘的边距 - 居中对齐
-            padding_x = (self.width() - (self.board_size - 1) * cell_size) / 2
-            padding_y = (self.height() - (self.board_size - 1) * cell_size) / 2
+            # 使用与paintEvent相同的计算逻辑
+            effective_size = size
+            cell_size = effective_size / (self.board_size - 1)
+            
+            padding_x = (self.width() - effective_size) / 2
+            padding_y = (self.height() - effective_size) / 2
             
             # 计算点击的格子坐标
             col = round((event.x() - padding_x) / cell_size)
@@ -285,9 +200,6 @@ class GoBoardWidget(QWidget):
                 if self.board_data[row][col] == 0:
                     # 放置当前玩家的棋子
                     self.board_data[row][col] = self.current_player
-                    
-                    # 记录棋步
-                    self.move_history.append((row, col))
                     
                     # 切换玩家
                     self.current_player = 3 - self.current_player  # 在1和2之间切换
@@ -382,10 +294,7 @@ class BoardWidget(QWidget):
             "1. 点击「开始对局」按钮开始游戏\n"
             "2. 黑棋先行，双方轮流下棋\n"
             "3. 先连成五子一线者获胜\n"
-            "4. 点击「重新开始」可随时重置游戏\n"
-            "5. 点击「悔棋」可撤销最后一步\n"
-            "6. 点击「结束游戏」可结束当前游戏\n"
-            "7. 游戏会自动保存到历史记录"
+            "4. 点击「重新开始」可随时重置游戏"
         )
         self.game_instructions.setWordWrap(True)
         self.game_instructions.setAlignment(Qt.AlignLeft)
@@ -394,23 +303,15 @@ class BoardWidget(QWidget):
         self.button_layout = QVBoxLayout()  # 改为垂直布局
         self.start_button = PushButton("开始对局")
         self.restart_button = PushButton("重新开始")
-        self.undo_button = PushButton("悔棋")
-        self.end_game_button = PushButton("结束游戏")
         
         # 设置按钮尺寸
         self.start_button.setFixedHeight(40)
         self.restart_button.setFixedHeight(40)
-        self.undo_button.setFixedHeight(40)
-        self.end_game_button.setFixedHeight(40)
         
         # 按钮添加到布局
         self.button_layout.addWidget(self.start_button)
         self.button_layout.addSpacing(10)
         self.button_layout.addWidget(self.restart_button)
-        self.button_layout.addSpacing(10)
-        self.button_layout.addWidget(self.undo_button)
-        self.button_layout.addSpacing(10)
-        self.button_layout.addWidget(self.end_game_button)
         
         # 添加组件到右侧布局
         self.right_layout.addWidget(self.title_label)
@@ -421,11 +322,11 @@ class BoardWidget(QWidget):
         self.right_layout.addSpacing(20)
         self.right_layout.addWidget(self.game_instructions)
         self.right_layout.addSpacing(20)
-        self.right_layout.addLayout(self.button_layout)  # 添加按钮布局
+        self.right_layout.addLayout(self.button_layout)
         self.right_layout.addStretch(1)  # 添加伸缩器使组件靠上对齐
         
         # 将棋盘容器和右侧面板添加到主布局，增加棋盘比例
-        self.main_layout.addWidget(self.left_container, 3)  # 给棋盘区域更多的比例
+        self.main_layout.addWidget(self.left_container, 3)  # 给棋盘区域更多的比例更大的比例
         self.main_layout.addWidget(self.right_panel, 0)  # 右侧面板不拉伸
         
         # 设置对象名称，用于导航
@@ -434,8 +335,6 @@ class BoardWidget(QWidget):
         # 连接按钮事件
         self.start_button.clicked.connect(self.onStartGame)
         self.restart_button.clicked.connect(self.onRestartGame)
-        self.undo_button.clicked.connect(self.onUndoMove)
-        self.end_game_button.clicked.connect(self.onEndGame)
         
         # 初始化时更新玩家信息
         self.update_player_info()
@@ -449,15 +348,12 @@ class BoardWidget(QWidget):
     
     def update_player_info(self):
         """更新当前玩家信息"""
-        if self.board.game_over:
-            player_text = "游戏结束！胜者：黑棋" if self.board.winner == 1 else "游戏结束！胜者：白棋"
-        else:
-            player_text = "当前玩家：黑棋" if self.board.current_player == 1 else "当前玩家：白棋"
+        player_text = "当前玩家：黑棋" if self.board.current_player == 1 else "当前玩家：白棋"
         self.player_info.setText(player_text)
     
     def onStartGame(self):
         """开始游戏"""
-        self.board.reset_game(start_immediately=True)  # 游戏立即开始
+        self.board.reset_game()  # 这个方法内部会设置game_started为True
         self.update_player_info()
         
         # 显示提示信息
@@ -473,156 +369,19 @@ class BoardWidget(QWidget):
     
     def onRestartGame(self):
         """重新开始游戏"""
-        # 检查是否需要保存当前游戏
-        if self.board.game_started and not self.board.game_over and any(any(row) for row in self.board.board_data):
-            # 只有在游戏已开始、未结束且棋盘上有棋子时才提示保存
-            reply = QMessageBox.question(
-                self, '重新开始', 
-                "当前游戏尚未结束，重新开始将自动保存当前游戏进度。确定要重新开始吗？",
-                QMessageBox.Yes | QMessageBox.No, 
-                QMessageBox.No
-            )
-            
-            if reply == QMessageBox.No:
-                return  # 用户取消操作
-            
-            # 自动保存当前游戏
-            self.saveGame()
-        
-        # 重置棋盘但不立即开始游戏
-        self.board.reset_game(start_immediately=False)
+        self.board.reset_game()
         self.update_player_info()
         
         # 显示提示信息
         InfoBar.info(
             title='游戏已重置',
-            content="棋盘已清空，请点击「开始对局」按钮",
+            content="棋盘已清空，黑棋先行",
             orient=Qt.Horizontal,
             isClosable=True,
             position=InfoBarPosition.TOP,
             duration=3000,
             parent=self
         )
-    
-    def onUndoMove(self):
-        """悔棋"""
-        # 检查是否因投降而结束游戏
-        if self.board.game_over and self.board.winner > 0:
-            InfoBar.warning(
-                title='无法悔棋',
-                content="游戏已经结束，不能悔棋",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-            return
-            
-        if self.board.undo_move():
-            self.update_player_info()
-            InfoBar.info(
-                title='悔棋成功',
-                content="已撤销最后一步",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-        else:
-            InfoBar.warning(
-                title='悔棋失败',
-                content="没有可撤销的步骤",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-    
-    def onEndGame(self):
-        """结束游戏"""
-        if not self.board.game_started:
-            InfoBar.warning(
-                title='无法结束',
-                content="游戏尚未开始",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-            return
-            
-        if self.board.game_over:
-            InfoBar.warning(
-                title='游戏已结束',
-                content="游戏已经结束",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-            return
-        
-        # 询问是否结束游戏
-        reply = QMessageBox.question(
-            self, '结束游戏', 
-            "确定要结束当前游戏吗？游戏将自动保存。",
-            QMessageBox.Yes | QMessageBox.No, 
-            QMessageBox.Yes
-        )
-        
-        if reply == QMessageBox.No:
-            return  # 用户取消操作
-        
-        # 自动保存游戏
-        self.saveGame()
-        
-        # 结束游戏
-        self.board.game_over = True
-        self.board.winner = 0  # 没有胜者
-        self.update_player_info()
-        InfoBar.info(
-            title='游戏结束',
-            content="游戏已结束并自动保存，可以点击「重新开始」按钮",
-            orient=Qt.Horizontal,
-            isClosable=True,
-            position=InfoBarPosition.TOP,
-            duration=3000,
-            parent=self
-        )
-    
-    def saveGame(self):
-        """内部方法：保存游戏到历史记录"""
-        if not self.board.game_started:
-            return False
-            
-        # 获取默认文件名和游戏数据
-        filename, game_data = self.board.save_game()
-        
-        # 导入历史记录管理器获取保存目录
-        from game_history_manager import GameHistoryManager
-        history_manager = GameHistoryManager()
-        
-        # 直接保存到默认路径
-        save_path = os.path.join(history_manager.history_dir, os.path.basename(filename))
-        result, _ = self.board.save_game(save_path)
-        
-        if result:
-            InfoBar.success(
-                title='自动保存',
-                content=f"游戏已自动保存到历史记录",
-                orient=Qt.Horizontal,
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=3000,
-                parent=self
-            )
-            return True
-        return False
 
 
 class BoardWindow(FramelessWindow):
@@ -651,26 +410,25 @@ class BoardWindow(FramelessWindow):
         # 创建主窗口部件
         self.central_widget = QWidget(self)
         
-        # 创建棋盘组件并设置尺寸策略
+        # 创建主布局并设置更宽松的边距
         self.main_layout = QVBoxLayout(self.central_widget)
         self.main_layout.setContentsMargins(10, 10, 10, 10)  # 减小边距，为棋盘留更多空间
         
+        # 创建棋盘组件并设置尺寸策略
         self.board_widget = BoardWidget(self, style_index)
         self.board_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # 创建关闭按钮
+        # 创建关闭按钮布局，并添加伸缩项让内容居中
         self.button_layout = QHBoxLayout()
         self.close_button = PushButton("关闭窗口")
         self.close_button.setFixedWidth(150)  # 设置固定宽度
         self.close_button.clicked.connect(self.close)
         self.button_layout.addStretch(1)
         self.button_layout.addWidget(self.close_button)
+        self.button_layout.addStretch(1)
         
         # 添加到布局时设置拉伸因子
         self.main_layout.addWidget(self.board_widget, 1)  # 添加拉伸因子，确保棋盘占据所有可用空间
-        self.main_layout.addLayout(self.button_layout, 0)  # 按钮布局不拉伸
-        
-        # 设置窗口的内容部件
         self.setLayout(QVBoxLayout(self))
         self.layout().setContentsMargins(0, 48, 0, 0)  # 为标题栏留出空间
         self.layout().addWidget(self.central_widget)

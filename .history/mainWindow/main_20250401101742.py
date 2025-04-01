@@ -2,7 +2,7 @@
 import sys
 import signal
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
 from main_window import Window  # 更新import语句，使用新的文件名
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     w.show()
     
     # 允许Python解释器定期处理信号，即便在Qt事件循环中
-    timer = QTimer()  # 直接使用QTimer而不是Qt.QTimer
+    timer = Qt.QTimer()
     timer.start(500)  # 每500ms检查一次信号
     timer.timeout.connect(lambda: None)  # 空函数，只是为了让Qt事件循环醒来
     

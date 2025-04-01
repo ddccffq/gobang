@@ -8,7 +8,7 @@ from qfluentwidgets import (NavigationBar, NavigationItemPosition, MessageBox,
                            isDarkTheme, FluentIcon as FIF)
 from qframelesswindow import FramelessWindow, TitleBar
 
-from interfaces import Widget, HomeInterface, LibraryInterface, HistoryInterface  # 添加HistoryInterface导入
+from interfaces import Widget, HomeInterface, LibraryInterface
 from board_view import BoardWidget  # 从board_view中导入BoardWidget
 
 
@@ -78,7 +78,6 @@ class Window(FramelessWindow):
         # create sub interface
         self.homeInterface = HomeInterface(self)
         self.appInterface = BoardWidget(self)  # 使用BoardWidget替代AppInterface
-        self.historyInterface = HistoryInterface(self)  # 添加历史对局界面
         self.libraryInterface = LibraryInterface(self)
 
         # initialize layout
@@ -99,7 +98,6 @@ class Window(FramelessWindow):
     def initNavigation(self):
         self.addSubInterface(self.homeInterface, FIF.HOME, '主页', selectedIcon=FIF.HOME_FILL)
         self.addSubInterface(self.appInterface, FIF.GAME, '五子棋游戏')  # 更改图标和文本
-        self.addSubInterface(self.historyInterface, FIF.HISTORY, '历史对局')  # 添加历史对局导航项
 
         self.addSubInterface(self.libraryInterface, FIF.BOOK_SHELF, '库', NavigationItemPosition.BOTTOM, FIF.LIBRARY_FILL)
         
@@ -117,7 +115,7 @@ class Window(FramelessWindow):
         self.navigationBar.setCurrentItem(self.homeInterface.objectName())
 
     def initWindow(self):
-        self.resize(1000, 800)  # 从900x700增加到1000x800
+        self.resize(900, 700)
         self.setWindowIcon(QIcon(':/qfluentwidgets/images/logo.png'))
         self.setWindowTitle('五子棋游戏')  # 更改窗口标题
         self.titleBar.setAttribute(Qt.WA_StyledBackground)
