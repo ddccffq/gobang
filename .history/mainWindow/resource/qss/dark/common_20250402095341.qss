@@ -1,0 +1,53 @@
+/* 所有界面通用的深色主题样式 */
+
+QWidget {
+    background-color: rgb(39, 39, 39);
+    color: white;
+}
+
+QScrollArea {
+    background-color: rgb(39, 39, 39);
+    border: none;
+}
+
+QLabel#interfaceTitle {
+    font: 33px 'Microsoft YaHei Light';
+    background-color: transparent;
+    color: white;
+}
+
+/* 主页界面样式 */
+HomeInterface, #homeWidget {
+    background-color: rgb(39, 39, 39);
+}
+
+/* 设置界面样式 */
+SettingInterface, #scrollWidget {
+    background-color: rgb(39, 39, 39);
+}
+
+/* 历史界面样式 */
+HistoryInterface {
+    background-color: rgb(39, 39, 39);
+}
+
+/* 应用界面样式 */
+#App-Interface {
+    background-color: rgb(39, 39, 39);
+}
+
+/* 组标题的样式 */
+QGroupBox {
+    font: 14px 'Microsoft YaHei';
+    border: 1px solid rgb(66, 66, 66);
+    border-radius: 6px;
+    margin-top: 12px;
+    background-color: rgb(50, 50, 50);
+    color: white;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px 0 3px;
+}

@@ -1,0 +1,18 @@
+{
+    "Update": {
+        "CheckUpdateAtStartUp": true
+    },
+    "MainWindow": {
+        "DpiScale": "Auto",
+        "EnableAcrylicBackground": false,
+        "Language": "Auto",
+        "MinimizeToTray": true
+    },
+    "Game": {
+        "HistoryDirectory": "C:/Users/17657/Desktop/Bupt/人工智能/五子棋/game_history"
+    },
+    "Theme": {
+        "ThemeColor": "#ff0078d4",
+        "ThemeMode": "Light"
+    }
+}
