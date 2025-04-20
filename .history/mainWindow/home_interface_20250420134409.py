@@ -150,14 +150,12 @@ class HomeInterface(ScrollArea):
         
         # 创建标题区域
         titleWidget = QWidget()
-        titleWidget.setStyleSheet("background-color: transparent;")  # 确保标题区域背景透明
         titleLayout = QHBoxLayout(titleWidget)
         titleLayout.setContentsMargins(0, 0, 0, 0)
         
         # 创建图标
         iconWidget = IconWidget(icon)
-        iconWidget.setFixedSize(24, 24)
-        iconWidget.setStyleSheet("background-color: transparent;")  # 确保图标背景透明
+        iconWidget.setFixedSize(24, 24)  # 使用 setFixedSize 替代 size 参数
         
         # 创建标题
         titleLabel = QLabel(title)
@@ -165,7 +163,6 @@ class HomeInterface(ScrollArea):
         titleFont.setPointSize(14)
         titleFont.setBold(True)
         titleLabel.setFont(titleFont)
-        titleLabel.setStyleSheet("background-color: transparent;")  # 确保标题文本背景透明
         
         # 添加到标题布局
         titleLayout.addWidget(iconWidget)
@@ -179,7 +176,7 @@ class HomeInterface(ScrollArea):
         contentFont = contentLabel.font()
         contentFont.setPointSize(11)
         contentLabel.setFont(contentFont)
-        contentLabel.setStyleSheet("background-color: transparent;")  # 确保内容文本背景透明
+        contentLabel.setStyleSheet("background-color: transparent;")  # 确保背景透明
         
         # 添加到卡片布局
         cardLayout.addWidget(titleWidget)

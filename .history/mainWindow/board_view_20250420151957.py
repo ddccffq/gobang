@@ -1,5 +1,5 @@
 # coding:utf-8
-from PyQt5.QtCore import Qt, QRect, QPoint, QSize, pyqtSignal
+from PyQt5.QtCore import Qt, QRect, QPoint, QSize
 from PyQt5.QtGui import QIcon, QFont, QPainter, QPen, QBrush, QColor, QPaintEvent
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QApplication, QSizePolicy, QFrame, QFileDialog, QMessageBox, QScrollArea
 import sys
@@ -16,10 +16,6 @@ from mainWindow.game_history_manager import GameHistoryManager
 
 class GoBoardWidget(QWidget):
     """15x15的五子棋棋盘组件"""
-    
-    # 添加玩家变更信号
-    playerChanged = pyqtSignal(int)  # 当前玩家变更信号，参数为玩家ID(1为黑棋，2为白棋)
-    gameStatusChanged = pyqtSignal(bool, int)  # 游戏状态变更信号(是否结束，胜者ID)
     
     # 棋盘样式 - 背景颜色
     BOARD_STYLES = {
@@ -88,9 +84,6 @@ class GoBoardWidget(QWidget):
         """重置游戏状态"""
         self.board_data = [[0 for _ in range(self.board_size)] for _ in range(self.board_size)]
         self.current_player = 1  # 黑棋先行
-        # 发出玩家变更信号
-        self.playerChanged.emit(self.current_player)
-        print(f"重置游戏时发出玩家变更信号：当前玩家 -> {self.current_player}")
         self.game_started = start_immediately  # 根据参数决定游戏是否立即开始
         self.move_history = []  # 清空历史记录
         self.game_over = False  # 游戏未结束
@@ -132,12 +125,7 @@ class GoBoardWidget(QWidget):
         self.board_data[last_move[0]][last_move[1]] = 0
         
         # 切换回前一个玩家
-        previous_player = self.current_player
         self.current_player = 3 - self.current_player
-        
-        # 发出玩家变更信号
-        self.playerChanged.emit(self.current_player)
-        print(f"悔棋时发出玩家变更信号：{previous_player} -> {self.current_player}")
         
         # 如果游戏已结束，则恢复为未结束状态
         if self.game_over:
@@ -548,45 +536,12 @@ class GoBoardWidget(QWidget):
         
         return ''.join(pattern)
 
-    def check_win(self, row, col):
-        """检查当前玩家是否获胜"""
-        player = self.board_data[row][col]
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # 横、竖、斜、反斜四个方向
-        
-        for dx, dy in directions:
-            count = 1  # 当前落子点计为1
-            
-            # 沿着正方向检查连子
-            for step in range(1, 5):  # 最多检查4步，加上当前位置刚好5子
-                x, y = row + dx * step, col + dy * step
-                if 0 <= x < self.board_size and 0 <= y < self.board_size and self.board_data[x][y] == player:
-                    count += 1
-                else:
-                    break
-                    
-            # 沿着反方向检查连子
-            for step in range(1, 5):
-                x, y = row - dx * step, col - dy * step
-                if 0 <= x < self.board_size and 0 <= y < self.board_size and self.board_data[x][y] == player:
-                    count += 1
-                else:
-                    break
-            
-            # 正好5子连线则获胜，超过5子对白棋也算获胜，对黑棋则是禁手
-            if count == 5 or (count > 5 and player == 2):
-                return True
-                
-        return False
-
     def mousePressEvent(self, event):
         """处理鼠标点击事件，放置棋子"""
         if not self.game_started or self.game_over:
             return
         if event.button() != Qt.LeftButton:
             return
-        
-        # 添加调试输出，显示点击事件被触发
-        print("棋盘点击事件被触发")
         
         # 计算格子大小和边距
         size = min(self.width(), self.height())
@@ -625,15 +580,6 @@ class GoBoardWidget(QWidget):
             self.game_over = True
             self.winner = self.current_player
             
-            # 确保立即重绘棋盘，显示最后一步棋子
-            self.repaint()
-            
-            # 通知父组件更新玩家信息 - 先于弹窗更新
-            parent = self.parent()
-            if parent and hasattr(parent, 'update_player_info'):
-                parent.update_player_info()
-                parent.repaint()
-            
             # 显示胜利消息
             winner_text = "黑棋" if self.current_player == 1 else "白棋"
             InfoBar.success(
@@ -645,19 +591,18 @@ class GoBoardWidget(QWidget):
                 duration=3000,
                 parent=self
             )
+            # 更新界面
+            self.update()
             
-            # 发出游戏状态变更信号
-            self.gameStatusChanged.emit(True, self.winner)
-            
+            # 通知父组件更新玩家信息
+            parent = self.parent()
+            if parent and hasattr(parent, 'update_player_info'):
+                parent.update_player_info()
+                
             return
         
         # 切换玩家
-        previous_player = self.current_player
         self.current_player = 3 - self.current_player
-        
-        # 发出玩家变更信号
-        self.playerChanged.emit(self.current_player)
-        print(f"发出玩家变更信号：{previous_player} -> {self.current_player}")
         
         # 如果轮到黑棋，更新禁手位置
         if self.current_player == 1:
@@ -665,11 +610,43 @@ class GoBoardWidget(QWidget):
         else:
             self.forbidden_positions = []  # 白棋回合清空禁手标记
         
-        # 强制打印日志，确认每次下棋都会触发玩家信息更新
-        print(f"落子成功，切换到玩家 {self.current_player}，开始更新玩家信息")
+        # 通知父组件更新玩家信息 - 确保先更新信息，再刷新界面
+        parent = self.parent()
+        if parent and hasattr(parent, 'update_player_info'):
+            parent.update_player_info()
+            
+        # 延后更新棋盘绘制以确保信息先更新
+        self.update()
+    
+    def check_win(self, row, col):
+        """检查当前玩家是否获胜"""
+        player = self.board_data[row][col]
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # 横、竖、斜、反斜四个方向
         
-        # 重绘棋盘
-        self.repaint()
+        for dx, dy in directions:
+            count = 1  # 当前落子点计为1
+            
+            # 沿着正方向检查连子
+            for step in range(1, 5):  # 最多检查4步，加上当前位置刚好5子
+                x, y = row + dx * step, col + dy * step
+                if 0 <= x < self.board_size and 0 <= y < self.board_size and self.board_data[x][y] == player:
+                    count += 1
+                else:
+                    break
+                    
+            # 沿着反方向检查连子
+            for step in range(1, 5):
+                x, y = row - dx * step, col - dy * step
+                if 0 <= x < self.board_size and 0 <= y < self.board_size and self.board_data[x][y] == player:
+                    count += 1
+                else:
+                    break
+            
+            # 正好5子连线则获胜，超过5子对白棋也算获胜，对黑棋则是禁手
+            if count == 5 or (count > 5 and player == 2):
+                return True
+                
+        return False
 
 
 class BoardWidget(QWidget):
@@ -795,9 +772,6 @@ class BoardWidget(QWidget):
         self.start_button.clicked.connect(self.onStartGame)
         self.undo_button.clicked.connect(self.onUndoMove)
         self.end_game_button.clicked.connect(self.onEndGame)
-        # 连接棋盘的玩家变更信号到更新方法
-        self.board.playerChanged.connect(self.on_player_changed)
-        self.board.gameStatusChanged.connect(self.on_game_status_changed)
         # 初始化时更新玩家信息
         self.update_player_info()
         # 设置初始游戏状态
@@ -1025,9 +999,6 @@ class BoardWidget(QWidget):
     
     def update_player_info(self):
         """更新当前玩家信息"""
-        # 添加调试输出，确认方法被调用
-        print(f"BoardWidget.update_player_info()被调用")
-        
         if self.board.game_over:
             player_text = "游戏结束！胜者：黑棋" if self.board.winner == 1 else "游戏结束！胜者：白棋" if self.board.winner == 2 else "游戏结束！"
             self.player_info.setText(player_text)
@@ -1049,20 +1020,13 @@ class BoardWidget(QWidget):
             print(f"更新玩家信息: {player_text}, 当前玩家: {self.board.current_player}, 玩家方: {self.player_side}")
             
             self.player_info.setText(player_text)
-        
-        # 强制立即重绘标签
-        self.player_info.repaint()
-    
-    # 添加新的槽函数处理玩家变更信号
-    def on_player_changed(self, player_id):
-        """处理玩家变更信号"""
-        print(f"收到玩家变更信号：{player_id}, 正在更新界面...")
-        self.update_player_info()  # 更新玩家信息标签
-    
-    def on_game_status_changed(self, is_game_over, winner_id):
-        """处理游戏状态变更信号"""
-        print(f"收到游戏状态变更信号：游戏结束={is_game_over}, 胜者={winner_id}")
-        self.update_player_info()  # 更新玩家信息标签
+            
+            # 强制立即重绘标签和父窗口
+            self.player_info.repaint()
+            self.update()
+            
+            # 强制处理所有待处理事件以确保UI更新
+            QApplication.processEvents()
 
 
 class BoardWindow(FramelessWindow):

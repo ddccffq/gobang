@@ -11,12 +11,7 @@ QScrollArea {
 }
 
 /* 确保所有文本类控件的背景为透明，以继承父控件背景色 */
-QLabel,
-TitleLabel,
-SubtitleLabel,
-CaptionLabel,
-StrongBodyLabel,
-BodyLabel {
+QLabel, TitleLabel, SubtitleLabel, CaptionLabel, StrongBodyLabel, BodyLabel {
     background-color: transparent;
 }
 

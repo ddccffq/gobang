@@ -118,7 +118,10 @@ class HistoryListItem(QWidget):
     def update_favorite_status(self, is_favorite):
         """更新收藏状态图标"""
         self.is_favorite = is_favorite
-        self.favorite_button.setText("已收藏" if is_favorite else "收藏")
+        self.favorite_button.setIcon(
+            FIF.STAR_EMPHASIS if is_favorite else FIF.STAR
+        )
+        self.favorite_button.setToolTip("已收藏" if is_favorite else "点击收藏")
     
     def enterEvent(self, event):
         """鼠标进入事件"""
@@ -371,7 +374,7 @@ class HistoryInterface(SmoothScrollArea):
         self.load_button.setFixedWidth(120)
         self.load_button.clicked.connect(self.load_game)
         
-        self.favorite_button = PushButton("收藏/取消", self)  # 去掉图标参数
+        self.favorite_button = PushButton("收藏/取消", self, FIF.STAR_EMPHASIS)
         self.favorite_button.setFixedWidth(120)
         self.favorite_button.clicked.connect(self.toggle_favorite)
         

@@ -625,15 +625,6 @@ class GoBoardWidget(QWidget):
             self.game_over = True
             self.winner = self.current_player
             
-            # 确保立即重绘棋盘，显示最后一步棋子
-            self.repaint()
-            
-            # 通知父组件更新玩家信息 - 先于弹窗更新
-            parent = self.parent()
-            if parent and hasattr(parent, 'update_player_info'):
-                parent.update_player_info()
-                parent.repaint()
-            
             # 显示胜利消息
             winner_text = "黑棋" if self.current_player == 1 else "白棋"
             InfoBar.success(
@@ -648,7 +639,7 @@ class GoBoardWidget(QWidget):
             
             # 发出游戏状态变更信号
             self.gameStatusChanged.emit(True, self.winner)
-            
+                
             return
         
         # 切换玩家
